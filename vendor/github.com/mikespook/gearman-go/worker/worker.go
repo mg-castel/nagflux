@@ -3,8 +3,8 @@
 package worker
 
 import (
-	"encoding/binary"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -30,7 +30,7 @@ type Worker struct {
 	limit        chan bool
 }
 
-// Return a worker.
+// New returns a worker.
 //
 // If limit is set to Unlimited(=0), the worker will grab all jobs
 // and execute them parallelly.
@@ -56,7 +56,7 @@ func (worker *Worker) err(e error) {
 	}
 }
 
-// Add a Gearman job server.
+// AddServer adds a Gearman job server.
 //
 // addr should be formated as 'host:port'.
 func (worker *Worker) AddServer(net, addr string) (err error) {
@@ -72,11 +72,11 @@ func (worker *Worker) AddServer(net, addr string) (err error) {
 // Broadcast an outpack to all Gearman server.
 func (worker *Worker) broadcast(outpack *outPack) {
 	for _, v := range worker.agents {
-		v.write(outpack)
+		v.Write(outpack)
 	}
 }
 
-// Add a function.
+// AddFunc adds a function.
 // Set timeout as Unlimited(=0) to disable executing timeout.
 func (worker *Worker) AddFunc(funcname string,
 	f JobFunc, timeout uint32) (err error) {
@@ -106,15 +106,17 @@ func prepFuncOutpack(funcname string, timeout uint32) *outPack {
 	} else {
 		outpack.dataType = dtCanDoTimeout
 		l := len(funcname)
-		outpack.data = getBuffer(l + 5)
+
+		timeoutString := strconv.FormatUint(uint64(timeout), 10)
+		outpack.data = getBuffer(l + len(timeoutString) + 1)
 		copy(outpack.data, []byte(funcname))
 		outpack.data[l] = '\x00'
-		binary.BigEndian.PutUint32(outpack.data[l+1:], timeout)
+		copy(outpack.data[l+1:], []byte(timeoutString))
 	}
 	return outpack
 }
 
-// Remove a function.
+// RemoveFunc removes a function.
 func (worker *Worker) RemoveFunc(funcname string) (err error) {
 	worker.Lock()
 	defer worker.Unlock()
@@ -184,7 +186,7 @@ func (worker *Worker) Ready() (err error) {
 	return
 }
 
-// Main loop, block here
+// Work start main loop (blocking)
 // Most of time, this should be evaluated in goroutine.
 func (worker *Worker) Work() {
 	if !worker.ready {
@@ -195,7 +197,10 @@ func (worker *Worker) Work() {
 		}
 	}
 
+	worker.Lock()
 	worker.running = true
+	worker.Unlock()
+
 	for _, a := range worker.agents {
 		a.Grab()
 	}
@@ -235,7 +240,7 @@ func (worker *Worker) Echo(data []byte) {
 	worker.broadcast(outpack)
 }
 
-// Remove all of functions.
+// Reset removes all of functions.
 // Both from the worker and job servers.
 func (worker *Worker) Reset() {
 	outpack := getOutPack()

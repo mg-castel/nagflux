@@ -111,6 +111,9 @@ func (a *agent) work() {
 }
 
 func (a *agent) disconnect_error(err error) {
+	a.Lock()
+	defer a.Unlock()
+
 	if a.conn != nil {
 		err = &WorkerDisconnectError{
 			err:   err,
@@ -159,8 +162,9 @@ func (a *agent) reconnect() error {
 	a.conn = conn
 	a.rw = bufio.NewReadWriter(bufio.NewReader(a.conn),
 		bufio.NewWriter(a.conn))
-	a.grab()
+
 	a.worker.reRegisterFuncsForAgent(a)
+	a.grab()
 
 	go a.work()
 	return nil

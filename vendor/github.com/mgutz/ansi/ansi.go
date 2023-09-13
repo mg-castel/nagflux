@@ -23,11 +23,14 @@ const (
 	normalIntensityBG = 40
 	highIntensityBG   = 100
 
-	start     = "\033["
-	bold      = "1;"
-	blink     = "5;"
-	underline = "4;"
-	inverse   = "7;"
+	start         = "\033["
+	normal        = "0;"
+	bold          = "1;"
+	dim           = "2;"
+	underline     = "4;"
+	blink         = "5;"
+	inverse       = "7;"
+	strikethrough = "9;"
 
 	// Reset is the ANSI reset escape sequence
 	Reset = "\033[0m"
@@ -163,9 +166,13 @@ func colorCode(style string) *bytes.Buffer {
 
 	buf.WriteString(start)
 	base := normalIntensityFG
+	buf.WriteString(normal) // reset any previous style
 	if len(fgStyle) > 0 {
 		if strings.Contains(fgStyle, "b") {
 			buf.WriteString(bold)
+		}
+		if strings.Contains(fgStyle, "d") {
+			buf.WriteString(dim)
 		}
 		if strings.Contains(fgStyle, "B") {
 			buf.WriteString(blink)
@@ -175,6 +182,9 @@ func colorCode(style string) *bytes.Buffer {
 		}
 		if strings.Contains(fgStyle, "i") {
 			buf.WriteString(inverse)
+		}
+		if strings.Contains(fgStyle, "s") {
+			buf.WriteString(strikethrough)
 		}
 		if strings.Contains(fgStyle, "h") {
 			base = highIntensityFG
@@ -220,7 +230,7 @@ func Color(s, style string) string {
 	return buf.String()
 }
 
-// ColorFunc creates a closureto avoid ANSI color code calculation.
+// ColorFunc creates a closure to avoid computation ANSI color code.
 func ColorFunc(style string) func(string) string {
 	if style == "" {
 		return func(s string) string {
@@ -240,7 +250,42 @@ func ColorFunc(style string) func(string) string {
 	}
 }
 
-// DisableColors disables ANSI color codes. On by default.
+// DisableColors disables ANSI color codes. The default is false (colors are on).
 func DisableColors(disable bool) {
 	plain = disable
+	if plain {
+		Black = ""
+		Red = ""
+		Green = ""
+		Yellow = ""
+		Blue = ""
+		Magenta = ""
+		Cyan = ""
+		White = ""
+		LightBlack = ""
+		LightRed = ""
+		LightGreen = ""
+		LightYellow = ""
+		LightBlue = ""
+		LightMagenta = ""
+		LightCyan = ""
+		LightWhite = ""
+	} else {
+		Black = ColorCode("black")
+		Red = ColorCode("red")
+		Green = ColorCode("green")
+		Yellow = ColorCode("yellow")
+		Blue = ColorCode("blue")
+		Magenta = ColorCode("magenta")
+		Cyan = ColorCode("cyan")
+		White = ColorCode("white")
+		LightBlack = ColorCode("black+h")
+		LightRed = ColorCode("red+h")
+		LightGreen = ColorCode("green+h")
+		LightYellow = ColorCode("yellow+h")
+		LightBlue = ColorCode("blue+h")
+		LightMagenta = ColorCode("magenta+h")
+		LightCyan = ColorCode("cyan+h")
+		LightWhite = ColorCode("white+h")
+	}
 }

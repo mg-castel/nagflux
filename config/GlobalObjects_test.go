@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/griesbacher/nagflux/data"
+	"github.com/mg-castel/nagflux/data"
 	"testing"
 )
 
